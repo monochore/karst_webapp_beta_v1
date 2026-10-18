@@ -27,7 +27,7 @@
     .col-header { font-size: 14px; letter-spacing: 2px; margin-bottom: 20px; text-transform: uppercase; color: var(--text-dim); height: 20px; text-align: center; transition: color 0.05s ease, text-shadow 0.05s ease; }
     
     .oled-container { width: 125px; background: #000; border: 1px solid #333; margin-bottom: 25px; display: flex; flex-direction: column; align-items: center; padding: 5px; box-sizing: border-box; box-shadow: inset 0 0 10px rgba(255,255,255,0.05); }
-    #scope { width: 100%; height: 50px; background: #050505; margin-bottom: 6px; border: 1px solid #222; cursor: pointer; }
+    #scope { width: 100%; height: 40px; background: #050505; margin-bottom: 6px; border: 1px solid #222; cursor: pointer; }
     .oled-row { display: flex; width: 100%; justify-content: space-between; margin-bottom: 5px; gap: 2px; }
     .oled-btn { flex: 1; background: transparent; border: 1px solid #555; color: #fff; font-family: 'Oswald', sans-serif; font-size: 9px; padding: 3px 0; cursor: pointer; text-transform: uppercase; transition: 0.1s; text-align: center;}
     .oled-btn:hover { background: #333; }
@@ -67,13 +67,16 @@
                 <div class="oled-row">
                     <button class="oled-btn" id="btn-activate">ACTIVATE</button>
                     <button class="oled-btn" id="btn-scatter">SCATTER</button>
+                </div>
+                <div class="oled-row">
                     <button class="oled-btn" id="btn-dump">DUMP</button>
+                    <button class="oled-btn" id="btn-rec">REC</button>
+                    <button class="oled-btn" id="btn-drift">DRIFT</button>
                 </div>
                 <div class="oled-row" style="margin-bottom: 5px;">
-                    <button class="oled-btn" id="btn-drift" style="flex: 0.35; margin-right: 4px;">DRIFT</button>
-                    <div style="display:flex; flex: 0.65; align-items:center; justify-content:center; background:#111; border:1px solid #333; padding:0 2px;">
+                    <div style="display:flex; flex: 1; align-items:center; justify-content:center; background:#111; border:1px solid #333; padding:0 2px;">
                         <button class="oled-btn" id="btn-a" style="border:none; padding:2px; min-width:15px; color:#aaa;">A</button>
-                        <input type="range" id="ab-slider" min="0" max="1" step="0.001" value="0" style="width:45px; flex:none; margin:0 4px; height:2px; -webkit-appearance:none; background:#555; outline:none;">
+                        <input type="range" id="ab-slider" min="0" max="1" step="0.001" value="0" style="flex:1; margin:0 4px; height:2px; -webkit-appearance:none; background:#555; outline:none;">
                         <button class="oled-btn" id="btn-b" style="border:none; padding:2px; min-width:15px; color:#aaa;">B</button>
                     </div>
                 </div>
@@ -160,19 +163,19 @@
 </div>
 
 <script>
-// Auto-scaler script to fit the chassis in any viewport perfectly
+// Auto-scaler script to fit the chassis perfectly
 function fitToScreen() {
     const chassis = document.getElementById('chassis');
-    chassis.style.transform = 'none'; // reset to measure
+    chassis.style.transform = 'none'; 
     const rect = chassis.getBoundingClientRect();
     const padding = 20; 
     const scaleX = window.innerWidth / (rect.width + padding);
     const scaleY = window.innerHeight / (rect.height + padding);
-    const scale = Math.min(1, scaleX, scaleY); // Never scale up beyond 100%, only down
+    const scale = Math.min(1, scaleX, scaleY); 
     chassis.style.transform = `scale(${scale})`;
 }
 window.addEventListener('resize', fitToScreen);
-setTimeout(fitToScreen, 50); // initial sizing 
+setTimeout(fitToScreen, 50);
 
 const workletString = `
 class SafeDelay {
@@ -206,8 +209,6 @@ class KarstProcessor extends AudioWorkletProcessor {
         this.v1_mute_slide=0; this.v1_mute_slide2=0; this.v2_mute_slide=0; this.v2_mute_slide2=0; this.v3_mute_slide=0; this.v3_mute_slide2=0; this.v4_mute_slide=0; this.v4_mute_slide2=0;
         this.prev_last_v1=0; this.flutter_acc=0; this.g3_slide=0; this.g4_slide=0; this.dc1_in=0; this.dc1_out=0; this.dc2_in=0; this.dc2_out=0;
         this.TWOPI = Math.PI * 2; this.fc = 0; this.last_e1=0; this.last_e2=0;
-        
-        // NEW ANALOGUE SLIP FILTERS
         this.slew_v1=0; this.slew_v2=0; this.slew_v3=0; this.slew_v4=0;
     }
     slide(t, c, u, d) { if(isNaN(c)) c=0; let diff=t-c; return c+(diff>0?diff/Math.max(1,u):diff/Math.max(1,d)); }
@@ -253,34 +254,26 @@ class KarstProcessor extends AudioWorkletProcessor {
             this.last_e1 = env1; this.last_e2 = env2;
             
             // ANALOGUE SLIP MODULATION (Tear & Heat)
-            let heat4 = Math.tanh(this.last_v4 * 1.5); this.slew_v4 += (heat4 - this.slew_v4) * 0.02;
-            let bleed_pm1 = this.slew_v4 * m_v1_bleed * 3.0; 
-            
+            let heat4 = Math.tanh(this.last_v4 * 1.5); this.slew_v4 += (heat4 - this.slew_v4) * 0.02; let bleed_pm1 = this.slew_v4 * m_v1_bleed * 3.0; 
             this.pitch_env1 = this.slide(held_trig1, this.pitch_env1, 1, 800); let freq1 = (40 + (m_v1_mass * 100)) * (1.0 + (this.pitch_env1 * 8.0)) * pitch_sag; this.phase1 = this.wrap(this.phase1 + (freq1 / sr), 0, 1);
             let sine_phase1 = this.wrap(this.phase1 + bleed_pm1, 0, 1); let sine1 = Math.sin(sine_phase1 * this.TWOPI);
             this.knock_env = this.slide(held_trig1, this.knock_env, 1, 300); let knock1 = this.pink_filter * this.knock_env * 0.4;
             let drive1 = 1.5 + (m_v1_matter * 2.0); let voice1 = Math.tanh((sine1 + knock1) * drive1) * env1 * 1.5; 
             
             let d_last_v1 = this.last_v1 - this.prev_last_v1; this.prev_last_v1 = this.last_v1;
-            let heat1 = Math.tanh(d_last_v1 * 10.0); this.slew_v1 += (heat1 - this.slew_v1) * 0.02;
-            let bleed_pm2 = this.slew_v1 * m_v2_bleed * 8.0; 
-
+            let heat1 = Math.tanh(d_last_v1 * 10.0); this.slew_v1 += (heat1 - this.slew_v1) * 0.02; let bleed_pm2 = this.slew_v1 * m_v2_bleed * 8.0; 
             this.pitch_env2 = this.slide(held_trig2, this.pitch_env2, 1, 1200); let freq2 = (30 + (m_v2_mass * 80)) * (1.0 + (this.pitch_env2 * 2.0)) * pitch_sag; this.phase2 = this.wrap(this.phase2 + (freq2 / sr), 0, 1);
             let sine_phase2 = this.wrap(this.phase2 + bleed_pm2, 0, 1); let sine2 = Math.sin(sine_phase2 * this.TWOPI);
             let drive2 = 1.2 + (m_v2_matter * 1.5); let voice2 = Math.tanh(sine2 * drive2) * env2 * 1.5; 
             
             let is_glass3 = this.s_v3_matter_raw < 0.01; let is_glass4 = this.s_v4_matter_raw < 0.01;
             
-            let heat2 = Math.tanh(this.last_v2 * 1.5); this.slew_v2 += (heat2 - this.slew_v2) * 0.02;
-            let bleed_fm3 = this.slew_v2 * m_v3_bleed * 2500.0; 
-            
+            let heat2 = Math.tanh(this.last_v2 * 1.5); this.slew_v2 += (heat2 - this.slew_v2) * 0.02; let bleed_fm3 = this.slew_v2 * m_v3_bleed * 2500.0; 
             let wood_freq = (40 + (m_v3_mass * 2000)) * pitch_sag; if(this.p3_acc === undefined) this.p3_acc = 0; this.p3_acc = this.wrap(this.p3_acc + (wood_freq + bleed_fm3)/sr, 0, 1); let strike_core3 = Math.sin(this.p3_acc * this.TWOPI) * this.env3; 
             let fold_drive3 = strike_core3 * (1.0 + (m_v3_matter * 8.0)); let warped_drive3 = fold_drive3 + (this.safepow(Math.abs(fold_drive3), 1.7) * this.s_v3_warp * 2.5); let folded_out3 = Math.sin(warped_drive3 * this.TWOPI);
             this.g3_slide = this.slide(gate3, this.g3_slide, 1, 5); let analog_v3 = (folded_out3 + (Math.pow(folded_out3, 3) * 0.333) + (white_core * this.g3_slide * 0.1)) * 0.12; let voice3 = is_glass3 ? (strike_core3 * 0.4) : analog_v3; 
             
-            let heat3 = Math.tanh(this.last_v3 * 1.5); this.slew_v3 += (heat3 - this.slew_v3) * 0.02;
-            let bleed_fm4 = this.slew_v3 * m_v4_bleed * 4000.0;
-
+            let heat3 = Math.tanh(this.last_v3 * 1.5); this.slew_v3 += (heat3 - this.slew_v3) * 0.02; let bleed_fm4 = this.slew_v3 * m_v4_bleed * 4000.0;
             let metal_freq = (20 + (m_v4_mass * 3000)) * pitch_sag; if(this.p4_acc === undefined) this.p4_acc = 0; this.p4_acc = this.wrap(this.p4_acc + (metal_freq + bleed_fm4)/sr, 0, 1); let strike_core4 = Math.sin(this.p4_acc * this.TWOPI) * this.env4;
             let fold_drive4 = strike_core4 * (1.0 + (m_v4_matter * 8.0)); let warped_drive4 = fold_drive4 + (this.safepow(Math.abs(fold_drive4), 1.7) * this.s_v4_warp * 2.5); let folded_out4 = Math.sin(warped_drive4 * this.TWOPI);
             this.g4_slide = this.slide(gate4, this.g4_slide, 1, 5); let analog_v4 = (folded_out4 + (Math.pow(folded_out4, 3) * 0.333) + (white_core * this.g4_slide * 0.1)) * 0.12; let voice4 = is_glass4 ? (strike_core4 * 0.4) : analog_v4;
@@ -328,12 +321,12 @@ class KarstProcessor extends AudioWorkletProcessor {
     }
 }
 registerProcessor('karst-node', KarstProcessor);
-`;
+`
 
-let audioCtx, karstNode, analyzer, scopeData; let isPlaying = false; let presets = JSON.parse(localStorage.getItem('karst_presets_v1')) || {};
-const canvas = document.getElementById('scope'); const ctx = canvas.getContext('2d'); canvas.width = 125; canvas.height = 50;
+let audioCtx, karstNode, analyzer, scopeData, recNode; let isPlaying = false; let presets = JSON.parse(localStorage.getItem('karst_presets_v1')) || {};
+const canvas = document.getElementById('scope'); const ctx = canvas.getContext('2d'); canvas.width = 125; canvas.height = 40;
 
-let scopeMode = 0; // 0 = Wave, 1 = Seismograph
+let scopeMode = 0; 
 let seismoHistory = new Array(canvas.width).fill(0);
 canvas.addEventListener('click', () => { scopeMode = 1 - scopeMode; });
 
@@ -350,8 +343,7 @@ function drawScope() {
     } else {
         let peak = 0;
         for(let i=0; i<scopeData.length; i++) { let v = Math.abs(scopeData[i] - 128) / 128.0; if(v > peak) peak = v; }
-        seismoHistory.shift(); seismoHistory.push(peak);
-        ctx.fillStyle = '#ff4444';
+        seismoHistory.shift(); seismoHistory.push(peak); ctx.fillStyle = '#ff4444';
         for(let x=0; x<canvas.width; x++) { let h = seismoHistory[x] * canvas.height; ctx.fillRect(x, canvas.height - h, 1, h); }
     }
 }
@@ -368,13 +360,14 @@ function updateGlow(id, intensity, r, g, b) {
     else { el.style.color = `rgba(${r}, ${g}, ${b}, ${0.7 + i * 0.3})`; el.style.textShadow = `0 0 ${i * 8}px rgba(${r}, ${g}, ${b}, ${i}), 0 0 ${i * 16}px rgba(${r}, ${g}, ${b}, ${i * 0.5})`; }
 }
 
+let isRecording = false; let recBuffersL = []; let recBuffersR = []; let recLength = 0;
+
 async function initAudio() {
     if (audioCtx) return;
     audioCtx = new (window.AudioContext || window.webkitAudioContext)({ latencyHint: 'interactive' });
     const blob = new Blob([workletString], { type: 'application/javascript' });
     await audioCtx.audioWorklet.addModule(URL.createObjectURL(blob));
     karstNode = new AudioWorkletNode(audioCtx, 'karst-node', { outputChannelCount: [2] });
-    
     karstNode.port.onmessage = e => {
         if (e.data.type === 'telemetry') {
             const [e1, e2, e3, e4] = e.data.envs;
@@ -383,7 +376,17 @@ async function initAudio() {
     };
     
     analyzer = audioCtx.createAnalyser(); analyzer.fftSize = 512; scopeData = new Uint8Array(analyzer.frequencyBinCount);
+    
+    recNode = audioCtx.createScriptProcessor(4096, 2, 2);
+    recNode.onaudioprocess = function(e) {
+        if (!isRecording) return;
+        let inL = e.inputBuffer.getChannelData(0); let inR = e.inputBuffer.getChannelData(1);
+        recBuffersL.push(new Float32Array(inL)); recBuffersR.push(new Float32Array(inR)); recLength += inL.length;
+    };
+
     karstNode.connect(analyzer); analyzer.connect(audioCtx.destination);
+    karstNode.connect(recNode); recNode.connect(audioCtx.destination);
+    
     isPlaying = true; document.getElementById('btn-activate').classList.add('active'); syncAllParams();
 }
 
@@ -400,20 +403,13 @@ document.getElementById('btn-activate').addEventListener('click', (e) => {
 });
 document.getElementById('btn-scatter').addEventListener('click', () => { document.querySelectorAll('.knob-svg').forEach(knob => { setKnobValue(knob, Math.random()); }); });
 
-// DRIFT LOGIC
 let isDrifting = false;
-document.getElementById('btn-drift').addEventListener('click', (e) => {
-    isDrifting = !isDrifting; e.target.classList.toggle('active', isDrifting);
-});
+document.getElementById('btn-drift').addEventListener('click', (e) => { isDrifting = !isDrifting; e.target.classList.toggle('active', isDrifting); });
 setInterval(() => {
     if(!isDrifting || !isPlaying) return;
-    document.querySelectorAll('.knob-svg').forEach(knob => {
-        let v = parseFloat(knob.dataset.val) + (Math.random() - 0.5) * 0.002;
-        setKnobValue(knob, v);
-    });
+    document.querySelectorAll('.knob-svg').forEach(knob => { let v = parseFloat(knob.dataset.val) + (Math.random() - 0.5) * 0.002; setKnobValue(knob, v); });
 }, 50);
 
-// SUBDUCTION (A/B) LOGIC
 let stateA = null, stateB = null;
 document.getElementById('btn-a').addEventListener('click', (e) => {
     stateA = {}; document.querySelectorAll('.knob-svg').forEach(k => stateA[k.id] = parseFloat(k.dataset.val));
@@ -427,6 +423,27 @@ document.getElementById('ab-slider').addEventListener('input', (e) => {
     if(!stateA || !stateB) return; let mix = parseFloat(e.target.value);
     document.querySelectorAll('.knob-svg').forEach(k => { setKnobValue(k, stateA[k.id] * (1 - mix) + stateB[k.id] * mix); });
 });
+
+document.getElementById('btn-rec').addEventListener('click', (e) => {
+    if(!audioCtx) return;
+    if (!isRecording) { isRecording = true; recBuffersL = []; recBuffersR = []; recLength = 0; e.target.style.background = 'var(--c-red)'; e.target.style.color = '#000'; } 
+    else { isRecording = false; e.target.style.background = 'transparent'; e.target.style.color = '#fff'; exportWAV(); }
+});
+
+function exportWAV() {
+    let interleaved = new Float32Array(recLength * 2); let offset = 0;
+    for (let i = 0; i < recBuffersL.length; i++) { let bufL = recBuffersL[i]; let bufR = recBuffersR[i]; for (let j = 0; j < bufL.length; j++) { interleaved[offset++] = bufL[j]; interleaved[offset++] = bufR[j]; } }
+    let buffer = new ArrayBuffer(44 + interleaved.length * 2); let view = new DataView(buffer);
+    let writeString = function(view, offset, string) { for (let i=0; i<string.length; i++) view.setUint8(offset + i, string.charCodeAt(i)); };
+    writeString(view, 0, 'RIFF'); view.setUint32(4, 36 + interleaved.length * 2, true); writeString(view, 8, 'WAVE');
+    writeString(view, 12, 'fmt '); view.setUint32(16, 16, true); view.setUint16(20, 1, true); view.setUint16(22, 2, true);
+    view.setUint32(24, audioCtx.sampleRate, true); view.setUint32(28, audioCtx.sampleRate * 4, true); view.setUint16(32, 4, true); view.setUint16(34, 16, true);
+    writeString(view, 36, 'data'); view.setUint32(40, interleaved.length * 2, true);
+    let o = 44; for (let i = 0; i < interleaved.length; i++, o += 2) { let s = Math.max(-1, Math.min(1, interleaved[i])); view.setInt16(o, s < 0 ? s * 0x8000 : s * 0x7FFF, true); }
+    let blob = new Blob([view], { type: 'audio/wav' }); let url = URL.createObjectURL(blob); let a = document.createElement('a'); a.style.display = 'none'; a.href = url;
+    let pName = document.getElementById('preset-list').value; a.download = `KARST_${pName === 'init' ? 'RAW' : pName.replace(' ', '_')}.wav`;
+    document.body.appendChild(a); a.click(); URL.revokeObjectURL(url);
+}
 
 const words1 = ["OBSIDIAN", "TECTONIC", "SHADOW", "ABYSSAL", "CALDERA", "PYROCLASTIC", "MANTLE", "SUBDUCTION"];
 const words2 = ["FRACTURE", "TREMOR", "VOID", "SLIP", "CORE", "VEIN", "CRUST", "ECHO"];
