@@ -1,0 +1,1000 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>KARST - Tectonic Rhythm Engine</title>
+<style>
+    @import url('https://fonts.googleapis.com/css2?family=Oswald:wght@400;500;600&display=swap');
+    
+    :root {
+        --bg: #0c0c0c;
+        --panel: #111111;
+        --border-main: #ffffff;
+        --col-div: rgba(255, 255, 255, 0.25);
+        --c-green: #00ff44;
+        --c-amber: #ff9d00;
+        --c-steel: #aaaaaa;
+        --c-lime:  #ffff00;
+        --c-cyan:  #00aaff;
+        --c-red:   #ff4444;
+        --text-dim: #bbbbbb;
+    }
+
+    body {
+        background-color: var(--bg);
+        color: #fff;
+        font-family: 'Oswald', sans-serif;
+        margin: 0;
+        display: flex;
+        justify-content: center;
+        align-items: center;
+        min-height: 100vh;
+        user-select: none;
+        overflow: hidden;
+    }
+
+    #chassis {
+        display: flex;
+        flex-direction: row;
+        background-color: var(--panel);
+        border: 2px solid var(--border-main);
+        outline: 2px solid var(--border-main);
+        outline-offset: -8px;
+        padding: 10px;
+        box-shadow: inset 0 0 60px rgba(0,0,0,0.9), 0 20px 50px rgba(0,0,0,0.8);
+    }
+
+    .vertical-text {
+        writing-mode: vertical-rl;
+        transform: rotate(180deg);
+        text-align: center;
+        font-size: 14px;
+        font-weight: 500;
+        letter-spacing: 6px;
+        padding: 0 15px;
+        color: var(--text-dim);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+    }
+
+    .panel-core {
+        display: flex;
+        border-left: 1px solid var(--col-div);
+        border-right: 1px solid var(--col-div);
+        padding: 15px 0;
+    }
+
+    .column {
+        width: 145px;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        border-right: 1px solid var(--col-div);
+        padding: 0 5px;
+        position: relative;
+    }
+    .column:last-child {
+        border-right: none;
+    }
+
+    .col-header {
+        font-size: 14px;
+        letter-spacing: 2px;
+        margin-bottom: 20px;
+        text-transform: uppercase;
+        color: var(--text-dim);
+        height: 20px;
+        text-align: center;
+    }
+
+    .oled-container {
+        width: 125px;
+        background: #000;
+        border: 1px solid #333;
+        margin-bottom: 25px;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        padding: 5px;
+        box-sizing: border-box;
+        box-shadow: inset 0 0 10px rgba(255,255,255,0.05);
+    }
+
+    #scope {
+        width: 100%;
+        height: 50px;
+        background: #050505;
+        margin-bottom: 6px;
+        border: 1px solid #222;
+    }
+
+    .oled-row {
+        display: flex;
+        width: 100%;
+        justify-content: space-between;
+        margin-bottom: 5px;
+        gap: 2px;
+    }
+
+    .oled-btn {
+        flex: 1;
+        background: transparent;
+        border: 1px solid #555;
+        color: #fff;
+        font-family: 'Oswald', sans-serif;
+        font-size: 9px;
+        padding: 3px 0;
+        cursor: pointer;
+        text-transform: uppercase;
+        transition: 0.1s;
+    }
+    .oled-btn:hover { background: #333; }
+    .oled-btn.active { background: var(--border-main); color: #000; }
+    
+    #preset-list {
+        width: 100%;
+        background: #000;
+        color: var(--border-main);
+        border: 1px solid #555;
+        font-family: 'Oswald', sans-serif;
+        font-size: 10px;
+        outline: none;
+        padding: 2px;
+    }
+
+    .knob-group {
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        margin-bottom: 20px;
+        width: 100%;
+    }
+    
+    .knob-row {
+        display: flex;
+        justify-content: space-evenly;
+        width: 100%;
+        margin-bottom: 20px;
+    }
+
+    .knob-container {
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        position: relative;
+    }
+
+    .knob-label {
+        font-size: 10px;
+        margin-bottom: 6px;
+        letter-spacing: 1px;
+        text-transform: uppercase;
+    }
+
+    .knob-svg {
+        width: 44px;
+        height: 44px;
+        cursor: ns-resize;
+        overflow: visible;
+        filter: drop-shadow(0 4px 4px rgba(0,0,0,0.5));
+    }
+    .knob-bg { fill: #1c1c1c; stroke-width: 2.5px; }
+    .knob-indicator { stroke: #fff; stroke-width: 2.5px; stroke-linecap: round; }
+
+    .mute-btn {
+        width: 20px;
+        height: 20px;
+        background: #222;
+        border: 1px solid #555;
+        cursor: pointer;
+        margin-top: auto;
+        margin-bottom: 10px;
+        transition: 0.2s;
+    }
+    .mute-btn.active { background: #fff; border-color: #fff; box-shadow: 0 0 10px rgba(255,255,255,0.5); }
+
+    .col-c1 .knob-bg { stroke: var(--c-green); }
+    .col-c1 .knob-label { color: var(--c-green); }
+    
+    .col-v1 .knob-bg { stroke: var(--c-amber); }
+    .col-v1 .knob-label { color: var(--c-amber); }
+    
+    .col-v2 .knob-bg { stroke: var(--c-steel); }
+    .col-v2 .knob-label { color: var(--c-steel); }
+    
+    .col-v3 .knob-bg { stroke: var(--c-lime); }
+    .col-v3 .knob-label { color: var(--c-lime); }
+    
+    .col-v4 .knob-bg { stroke: var(--c-cyan); }
+    .col-v4 .knob-label { color: var(--c-cyan); }
+    
+    .col-c6 .knob-bg { stroke: var(--c-red); }
+    .col-c6 .knob-label { color: var(--c-red); }
+
+</style>
+</head>
+<body>
+
+<div id="chassis">
+    <div class="vertical-text">KARST</div>
+    
+    <div class="panel-core">
+        
+        <!-- COLUMN 1: CONTROLS & OLED -->
+        <div class="column col-c1">
+            <div class="col-header" style="color:transparent">.</div>
+            <div class="oled-container">
+                <canvas id="scope"></canvas>
+                <div class="oled-row">
+                    <button class="oled-btn" id="btn-activate">ACTIVATE</button>
+                    <button class="oled-btn" id="btn-scatter">SCATTER</button>
+                    <button class="oled-btn" id="btn-dump">DUMP</button>
+                </div>
+                <select id="preset-list"><option value="init">INITIALIZED</option></select>
+            </div>
+            <div class="knob-group"><div class="knob-container"><div class="knob-label">SHEAR</div><svg class="knob-svg" id="shear" data-val="0" viewBox="0 0 44 44"><circle class="knob-bg" cx="22" cy="22" r="18"></circle><line class="knob-indicator" x1="22" y1="22" x2="22" y2="8"></line></svg></div></div>
+            <div class="knob-group"><div class="knob-container"><div class="knob-label">STRATA</div><svg class="knob-svg" id="strata" data-val="0.5" viewBox="0 0 44 44"><circle class="knob-bg" cx="22" cy="22" r="18"></circle><line class="knob-indicator" x1="22" y1="22" x2="22" y2="8"></line></svg></div></div>
+            <div class="knob-group"><div class="knob-container"><div class="knob-label">EROSION</div><svg class="knob-svg" id="erosion" data-val="0" viewBox="0 0 44 44"><circle class="knob-bg" cx="22" cy="22" r="18"></circle><line class="knob-indicator" x1="22" y1="22" x2="22" y2="8"></line></svg></div></div>
+        </div>
+
+        <!-- COLUMN 2: I. MANTLE -->
+        <div class="column col-v1">
+            <div class="col-header">I. MANTLE</div>
+            <div class="knob-group"><div class="knob-container"><div class="knob-label">MASS</div><svg class="knob-svg" id="v1_mass" data-val="0.1" viewBox="0 0 44 44"><circle class="knob-bg" cx="22" cy="22" r="18"></circle><line class="knob-indicator" x1="22" y1="22" x2="22" y2="8"></line></svg></div></div>
+            <div class="knob-row">
+                <div class="knob-container"><div class="knob-label">MATTER</div><svg class="knob-svg" id="v1_matter" data-val="0.5" viewBox="0 0 44 44"><circle class="knob-bg" cx="22" cy="22" r="18"></circle><line class="knob-indicator" x1="22" y1="22" x2="22" y2="8"></line></svg></div>
+                <div class="knob-container"><div class="knob-label">DIV</div><svg class="knob-svg" id="v1_clock" data-val="0.3" viewBox="0 0 44 44"><circle class="knob-bg" cx="22" cy="22" r="18"></circle><line class="knob-indicator" x1="22" y1="22" x2="22" y2="8"></line></svg></div>
+            </div>
+            <div class="knob-row">
+                <div class="knob-container"><div class="knob-label">FLUID</div><svg class="knob-svg" id="v1_fluid" data-val="0.2" viewBox="0 0 44 44"><circle class="knob-bg" cx="22" cy="22" r="18"></circle><line class="knob-indicator" x1="22" y1="22" x2="22" y2="8"></line></svg></div>
+                <div class="knob-container"><div class="knob-label">SLIP</div><svg class="knob-svg" id="v1_gravity" data-val="0" viewBox="0 0 44 44"><circle class="knob-bg" cx="22" cy="22" r="18"></circle><line class="knob-indicator" x1="22" y1="22" x2="22" y2="8"></line></svg></div>
+            </div>
+            <div class="knob-group"><div class="knob-container"><div class="knob-label">VOL</div><svg class="knob-svg" id="v1_vol" data-val="0.7" viewBox="0 0 44 44"><circle class="knob-bg" cx="22" cy="22" r="18"></circle><line class="knob-indicator" x1="22" y1="22" x2="22" y2="8"></line></svg></div></div>
+            <div class="mute-btn" id="v1_mute" data-val="0"></div>
+        </div>
+
+        <!-- COLUMN 3: II. SHADOW -->
+        <div class="column col-v2">
+            <div class="col-header">II. SHADOW</div>
+            <div class="knob-group"><div class="knob-container"><div class="knob-label">MASS</div><svg class="knob-svg" id="v2_mass" data-val="0.2" viewBox="0 0 44 44"><circle class="knob-bg" cx="22" cy="22" r="18"></circle><line class="knob-indicator" x1="22" y1="22" x2="22" y2="8"></line></svg></div></div>
+            <div class="knob-row">
+                <div class="knob-container"><div class="knob-label">MATTER</div><svg class="knob-svg" id="v2_matter" data-val="0.4" viewBox="0 0 44 44"><circle class="knob-bg" cx="22" cy="22" r="18"></circle><line class="knob-indicator" x1="22" y1="22" x2="22" y2="8"></line></svg></div>
+                <div class="knob-container"><div class="knob-label">DIV</div><svg class="knob-svg" id="v2_clock" data-val="0.9" viewBox="0 0 44 44"><circle class="knob-bg" cx="22" cy="22" r="18"></circle><line class="knob-indicator" x1="22" y1="22" x2="22" y2="8"></line></svg></div>
+            </div>
+            <div class="knob-row">
+                <div class="knob-container"><div class="knob-label">FLUID</div><svg class="knob-svg" id="v2_fluid" data-val="0.3" viewBox="0 0 44 44"><circle class="knob-bg" cx="22" cy="22" r="18"></circle><line class="knob-indicator" x1="22" y1="22" x2="22" y2="8"></line></svg></div>
+                <div class="knob-container"><div class="knob-label">SLIP</div><svg class="knob-svg" id="v2_gravity" data-val="0.1" viewBox="0 0 44 44"><circle class="knob-bg" cx="22" cy="22" r="18"></circle><line class="knob-indicator" x1="22" y1="22" x2="22" y2="8"></line></svg></div>
+            </div>
+            <div class="knob-group"><div class="knob-container"><div class="knob-label">VOL</div><svg class="knob-svg" id="v2_vol" data-val="0.7" viewBox="0 0 44 44"><circle class="knob-bg" cx="22" cy="22" r="18"></circle><line class="knob-indicator" x1="22" y1="22" x2="22" y2="8"></line></svg></div></div>
+            <div class="mute-btn" id="v2_mute" data-val="0"></div>
+        </div>
+
+        <!-- COLUMN 4: III. FLINT -->
+        <div class="column col-v3">
+            <div class="col-header">III. FLINT</div>
+            <div class="knob-group"><div class="knob-container"><div class="knob-label">MASS</div><svg class="knob-svg" id="v3_mass" data-val="0.5" viewBox="0 0 44 44"><circle class="knob-bg" cx="22" cy="22" r="18"></circle><line class="knob-indicator" x1="22" y1="22" x2="22" y2="8"></line></svg></div></div>
+            <div class="knob-row">
+                <div class="knob-container"><div class="knob-label">MATTER</div><svg class="knob-svg" id="v3_matter" data-val="0.2" viewBox="0 0 44 44"><circle class="knob-bg" cx="22" cy="22" r="18"></circle><line class="knob-indicator" x1="22" y1="22" x2="22" y2="8"></line></svg></div>
+                <div class="knob-container"><div class="knob-label">DIV</div><svg class="knob-svg" id="v3_clock" data-val="0.5" viewBox="0 0 44 44"><circle class="knob-bg" cx="22" cy="22" r="18"></circle><line class="knob-indicator" x1="22" y1="22" x2="22" y2="8"></line></svg></div>
+            </div>
+            <div class="knob-row">
+                <div class="knob-container"><div class="knob-label">FLUID</div><svg class="knob-svg" id="v3_fluid" data-val="0.1" viewBox="0 0 44 44"><circle class="knob-bg" cx="22" cy="22" r="18"></circle><line class="knob-indicator" x1="22" y1="22" x2="22" y2="8"></line></svg></div>
+                <div class="knob-container"><div class="knob-label">SLIP</div><svg class="knob-svg" id="v3_gravity" data-val="0.2" viewBox="0 0 44 44"><circle class="knob-bg" cx="22" cy="22" r="18"></circle><line class="knob-indicator" x1="22" y1="22" x2="22" y2="8"></line></svg></div>
+            </div>
+            <div class="knob-group"><div class="knob-container"><div class="knob-label">VOL</div><svg class="knob-svg" id="v3_vol" data-val="0.6" viewBox="0 0 44 44"><circle class="knob-bg" cx="22" cy="22" r="18"></circle><line class="knob-indicator" x1="22" y1="22" x2="22" y2="8"></line></svg></div></div>
+            <div class="mute-btn" id="v3_mute" data-val="0"></div>
+        </div>
+
+        <!-- COLUMN 5: IV. APEX -->
+        <div class="column col-v4">
+            <div class="col-header">IV. APEX</div>
+            <div class="knob-group"><div class="knob-container"><div class="knob-label">MASS</div><svg class="knob-svg" id="v4_mass" data-val="0.8" viewBox="0 0 44 44"><circle class="knob-bg" cx="22" cy="22" r="18"></circle><line class="knob-indicator" x1="22" y1="22" x2="22" y2="8"></line></svg></div></div>
+            <div class="knob-row">
+                <div class="knob-container"><div class="knob-label">MATTER</div><svg class="knob-svg" id="v4_matter" data-val="0.1" viewBox="0 0 44 44"><circle class="knob-bg" cx="22" cy="22" r="18"></circle><line class="knob-indicator" x1="22" y1="22" x2="22" y2="8"></line></svg></div>
+                <div class="knob-container"><div class="knob-label">DIV</div><svg class="knob-svg" id="v4_clock" data-val="0.1" viewBox="0 0 44 44"><circle class="knob-bg" cx="22" cy="22" r="18"></circle><line class="knob-indicator" x1="22" y1="22" x2="22" y2="8"></line></svg></div>
+            </div>
+            <div class="knob-row">
+                <div class="knob-container"><div class="knob-label">FLUID</div><svg class="knob-svg" id="v4_fluid" data-val="0.1" viewBox="0 0 44 44"><circle class="knob-bg" cx="22" cy="22" r="18"></circle><line class="knob-indicator" x1="22" y1="22" x2="22" y2="8"></line></svg></div>
+                <div class="knob-container"><div class="knob-label">SLIP</div><svg class="knob-svg" id="v4_gravity" data-val="0" viewBox="0 0 44 44"><circle class="knob-bg" cx="22" cy="22" r="18"></circle><line class="knob-indicator" x1="22" y1="22" x2="22" y2="8"></line></svg></div>
+            </div>
+            <div class="knob-group"><div class="knob-container"><div class="knob-label">VOL</div><svg class="knob-svg" id="v4_vol" data-val="0.6" viewBox="0 0 44 44"><circle class="knob-bg" cx="22" cy="22" r="18"></circle><line class="knob-indicator" x1="22" y1="22" x2="22" y2="8"></line></svg></div></div>
+            <div class="mute-btn" id="v4_mute" data-val="0"></div>
+        </div>
+
+        <!-- COLUMN 6: ENGINE -->
+        <div class="column col-c6">
+            <div class="col-header" style="color:transparent">.</div>
+            <div class="knob-group" style="margin-top: 25px;"><div class="knob-container"><div class="knob-label">BAKE</div><svg class="knob-svg" id="bake" data-val="0" viewBox="0 0 44 44"><circle class="knob-bg" cx="22" cy="22" r="18"></circle><line class="knob-indicator" x1="22" y1="22" x2="22" y2="8"></line></svg></div></div>
+            <div class="knob-group" style="margin-top: 35px;"><div class="knob-container"><div class="knob-label">PING</div><svg class="knob-svg" id="liquefaction" data-val="0" viewBox="0 0 44 44"><circle class="knob-bg" cx="22" cy="22" r="18"></circle><line class="knob-indicator" x1="22" y1="22" x2="22" y2="8"></line></svg></div></div>
+            <div class="knob-group" style="margin-top: 35px;"><div class="knob-container"><div class="knob-label">VOID</div><svg class="knob-svg" id="collapse" data-val="0" viewBox="0 0 44 44"><circle class="knob-bg" cx="22" cy="22" r="18"></circle><line class="knob-indicator" x1="22" y1="22" x2="22" y2="8"></line></svg></div></div>
+        </div>
+        
+    </div>
+    
+    <div class="vertical-text">TECTONIC RHYTHM ENGINE</div>
+</div>
+
+<script>
+const workletString = `
+class SafeDelay {
+    constructor(size) {
+        this.size = size;
+        this.buf = new Float32Array(size);
+        this.writeIdx = 0;
+    }
+    write(val) {
+        if(isNaN(val)) val = 0;
+        this.buf[this.writeIdx] = val;
+        this.writeIdx = (this.writeIdx + 1) % this.size;
+    }
+    read(samplesAgo, interp = "spline") {
+        if (isNaN(samplesAgo)) samplesAgo = 0;
+        samplesAgo = Math.max(0, Math.min(samplesAgo, this.size - 2)); 
+        
+        let readPos = this.writeIdx - samplesAgo;
+        while(readPos < 0) readPos += this.size;
+        
+        if (interp === "linear" || interp === "spline") {
+            let i1 = Math.floor(readPos);
+            let i2 = (i1 + 1) % this.size;
+            let frac = readPos - i1;
+            return this.buf[i1] + frac * (this.buf[i2] - this.buf[i1]);
+        }
+        return this.buf[Math.floor(readPos)];
+    }
+}
+
+class KarstProcessor extends AudioWorkletProcessor {
+    constructor() {
+        super();
+        this.p = {
+            strata: 0.5, liquefaction: 0, erosion: 0, bake: 0, collapse: 0, shear: 0,
+            v1_mass: 0, v1_matter: 0, v1_gravity: 0, v1_fluid: 0, v1_clock: 0.3, v1_vol: 0.7, v1_mute: 0,
+            v2_mass: 0, v2_matter: 0, v2_gravity: 0, v2_fluid: 0, v2_clock: 0.9, v2_vol: 0.7, v2_mute: 0,
+            v3_mass: 0, v3_matter: 0, v3_gravity: 0, v3_fluid: 0, v3_clock: 0.5, v3_vol: 0.6, v3_mute: 0, v3_warp: 0,
+            v4_mass: 0, v4_matter: 0, v4_gravity: 0, v4_fluid: 0, v4_clock: 0.1, v4_vol: 0.6, v4_mute: 0, v4_warp: 0
+        };
+        
+        this.port.onmessage = e => {
+            if (e.data.id && this.p[e.data.id] !== undefined) {
+                this.p[e.data.id] = e.data.value;
+            }
+        };
+
+        this.s_strata = 0; this.s_liquefaction = 0; this.s_erosion = 0;
+        this.s_bake = 0; this.s_collapse = 0; this.s_shear = 0;
+        
+        this.s_v1_mass_raw = 0; this.s_v1_matter_raw = 0; this.s_v1_fluid_slide = 0; this.s_v1_clock = 0; this.s_v1_vol = 0; this.s_v1_gravity = 0;
+        this.s_v2_mass_raw = 0; this.s_v2_matter_raw = 0; this.s_v2_fluid_slide = 0; this.s_v2_clock = 0; this.s_v2_vol = 0; this.s_v2_gravity = 0;
+        this.s_v3_mass_raw = 0; this.s_v3_matter_raw = 0; this.s_v3_fluid_slide = 0; this.s_v3_clock = 0; this.s_v3_vol = 0; this.s_v3_gravity = 0; this.s_v3_warp = 0;
+        this.s_v4_mass_raw = 0; this.s_v4_matter_raw = 0; this.s_v4_fluid_slide = 0; this.s_v4_clock = 0; this.s_v4_vol = 0; this.s_v4_gravity = 0; this.s_v4_warp = 0;
+
+        this.last_v1 = 0; this.last_v2 = 0; this.last_v3 = 0; this.last_v4 = 0;
+        this.phase1 = 0; this.phase2 = 0; 
+        
+        this.del_L = new SafeDelay(96000); this.del_R = new SafeDelay(96000);
+        this.rev1 = new SafeDelay(96000); this.rev2 = new SafeDelay(96000);
+        this.crinkle_del = new SafeDelay(96000);
+        
+        this.pink_filter = 0;
+        this.vactrol_state = 0; 
+        this.opto_state = 0;
+        this.halo_lp = 0;
+        this.damp_L = 0; this.damp_R = 0;
+        
+        this.rand2 = 0; this.rand3 = 0; this.rand4 = 0;
+        this.slice_dice = 0;
+        this.glitch_step = 0;
+        
+        this.last_tap_L = 0; this.last_tap_R = 0;
+
+        this.base_phase_acc = 0; this.prev_base_phase = 0;
+        this.c1_acc = 0; this.c2_acc = 0; this.c3_acc = 0; this.c4_acc = 0;
+        this.prev_c1 = 0; this.prev_c2 = 0; this.prev_c3 = 0; this.prev_c4 = 0;
+        this.slice_phase_acc = 0; this.prev_chopper = 0;
+        
+        this.gate1_hold = 0; this.gate2_hold = 0; this.gate3_hold = 0; this.gate4_hold = 0;
+        
+        this.slicer_env = 0;
+        this.raw_env1 = 0; this.raw_env2 = 0; this.env3 = 0; this.env4 = 0;
+        this.sag_env = 0;
+        this.pitch_env1 = 0; this.pitch_env2 = 0;
+        this.knock_env = 0;
+        
+        this.v1_mute_slide = 0; this.v1_mute_slide2 = 0;
+        this.v2_mute_slide = 0; this.v2_mute_slide2 = 0;
+        this.v3_mute_slide = 0; this.v3_mute_slide2 = 0;
+        this.v4_mute_slide = 0; this.v4_mute_slide2 = 0;
+        
+        this.prev_last_v1 = 0;
+        this.flutter_acc = 0;
+        this.g3_slide = 0; this.g4_slide = 0;
+        this.dc1_in = 0; this.dc1_out = 0;
+        this.dc2_in = 0; this.dc2_out = 0;
+        
+        this.TWOPI = Math.PI * 2;
+    }
+
+    slide(target, current, up, down) {
+        if(isNaN(current)) current = 0;
+        let diff = target - current;
+        return current + (diff > 0 ? diff / Math.max(1, up) : diff / Math.max(1, down));
+    }
+    
+    noise() { return Math.random() * 2.0 - 1.0; }
+    
+    wrap(v, min, max) {
+        let range = max - min;
+        if(range === 0) return min;
+        let res = (v - min) % range;
+        if(res < 0) res += range;
+        return res + min;
+    }
+
+    safepow(base, exp) {
+        return Math.pow(Math.max(0, base), exp);
+    }
+
+    process(inputs, outputs, parameters) {
+        const outL = outputs[0][0];
+        const outR = outputs[0][1];
+        if (!outL || !outR) return true;
+        
+        const sr = sampleRate;
+
+        for (let i = 0; i < outL.length; i++) {
+            this.s_strata = this.slide(this.p.strata, this.s_strata, 100, 100);
+            this.s_liquefaction = this.slide(this.p.liquefaction, this.s_liquefaction, 100, 100);
+            this.s_erosion = this.slide(this.p.erosion, this.s_erosion, 100, 100);
+            this.s_bake = this.slide(this.p.bake, this.s_bake, 100, 100);
+            this.s_collapse = this.slide(this.p.collapse, this.s_collapse, 100, 100);
+            this.s_shear = this.slide(this.p.shear, this.s_shear, 100, 100);
+
+            this.s_v1_mass_raw = this.slide(this.p.v1_mass, this.s_v1_mass_raw, 4410, 4410);
+            let m_v1_mass = this.safepow(this.s_v1_mass_raw, 3); 
+            this.s_v1_matter_raw = this.slide(this.p.v1_matter, this.s_v1_matter_raw, 4410, 4410);
+            let m_v1_matter = this.safepow(this.s_v1_matter_raw, 3); 
+            this.s_v1_fluid_slide = this.slide(this.p.v1_fluid, this.s_v1_fluid_slide, 100, 100);
+            let m_v1_fluid = this.safepow(this.s_v1_fluid_slide, 3); 
+            this.s_v1_clock = this.slide(this.p.v1_clock, this.s_v1_clock, 100, 100); 
+            this.s_v1_vol = this.slide(this.p.v1_vol, this.s_v1_vol, 100, 100);
+
+            this.s_v2_mass_raw = this.slide(this.p.v2_mass, this.s_v2_mass_raw, 4410, 4410);
+            let m_v2_mass = this.safepow(this.s_v2_mass_raw, 3); 
+            this.s_v2_matter_raw = this.slide(this.p.v2_matter, this.s_v2_matter_raw, 4410, 4410);
+            let m_v2_matter = this.safepow(this.s_v2_matter_raw, 3); 
+            this.s_v2_fluid_slide = this.slide(this.p.v2_fluid, this.s_v2_fluid_slide, 100, 100);
+            let m_v2_fluid = this.safepow(this.s_v2_fluid_slide, 3); 
+            this.s_v2_clock = this.slide(this.p.v2_clock, this.s_v2_clock, 100, 100); 
+            this.s_v2_vol = this.slide(this.p.v2_vol, this.s_v2_vol, 100, 100);
+
+            this.s_v3_mass_raw = this.slide(this.p.v3_mass, this.s_v3_mass_raw, 4410, 4410);
+            let m_v3_mass = this.safepow(this.s_v3_mass_raw, 3); 
+            this.s_v3_matter_raw = this.slide(this.p.v3_matter, this.s_v3_matter_raw, 4410, 4410);
+            let m_v3_matter = this.safepow(this.s_v3_matter_raw, 3); 
+            this.s_v3_fluid_slide = this.slide(this.p.v3_fluid, this.s_v3_fluid_slide, 100, 100);
+            let m_v3_fluid = this.safepow(this.s_v3_fluid_slide, 3); 
+            this.s_v3_clock = this.slide(this.p.v3_clock, this.s_v3_clock, 100, 100); 
+            this.s_v3_vol = this.slide(this.p.v3_vol, this.s_v3_vol, 100, 100);
+            this.s_v3_warp = this.slide(this.p.v3_warp, this.s_v3_warp, 200, 200);
+
+            this.s_v4_mass_raw = this.slide(this.p.v4_mass, this.s_v4_mass_raw, 4410, 4410);
+            let m_v4_mass = this.safepow(this.s_v4_mass_raw, 3); 
+            this.s_v4_matter_raw = this.slide(this.p.v4_matter, this.s_v4_matter_raw, 4410, 4410);
+            let m_v4_matter = this.safepow(this.s_v4_matter_raw, 3); 
+            this.s_v4_fluid_slide = this.slide(this.p.v4_fluid, this.s_v4_fluid_slide, 100, 100);
+            let m_v4_fluid = this.safepow(this.s_v4_fluid_slide, 3); 
+            this.s_v4_clock = this.slide(this.p.v4_clock, this.s_v4_clock, 100, 100); 
+            this.s_v4_vol = this.slide(this.p.v4_vol, this.s_v4_vol, 100, 100);
+            this.s_v4_warp = this.slide(this.p.v4_warp, this.s_v4_warp, 200, 200);
+
+            this.s_v1_gravity = this.slide(this.p.v1_gravity, this.s_v1_gravity, 4410, 4410);
+            let m_v1_bleed = this.safepow(this.s_v1_gravity, 3);
+            this.s_v2_gravity = this.slide(this.p.v2_gravity, this.s_v2_gravity, 4410, 4410);
+            let m_v2_bleed = this.safepow(this.s_v2_gravity, 3);
+            this.s_v3_gravity = this.slide(this.p.v3_gravity, this.s_v3_gravity, 4410, 4410);
+            let m_v3_bleed = this.safepow(this.s_v3_gravity, 3);
+            this.s_v4_gravity = this.slide(this.p.v4_gravity, this.s_v4_gravity, 4410, 4410);
+            let m_v4_bleed = this.safepow(this.s_v4_gravity, 3);
+
+            let base_hz = this.s_strata * 3.5; 
+            let is_running = this.s_strata > 0.001 ? 1.0 : 0.0; 
+            let is_drone = this.s_strata <= 0.001 ? 1.0 : 0.0;
+
+            let rate1_mult = Math.pow(2, (this.s_v1_clock * 0.65 * 4) - 2);
+            let rate2_mult = Math.pow(2, (this.s_v2_clock * 0.5 * 4) - 2);
+            let rate3_mult = Math.pow(2, (this.s_v3_clock * 0.8 * 4) - 2);
+            let rate4_mult = Math.pow(2, (this.s_v4_clock * 0.8 * 4) - 2);
+
+            let swing_amt = Math.min(this.s_shear * 5.0, 1.0) * 0.04; 
+            this.base_phase_acc = (this.base_phase_acc + base_hz/sr) % 1.0;
+            let global_swing = Math.sin(this.base_phase_acc * this.TWOPI) * swing_amt;
+
+            let d_base = this.base_phase_acc - this.prev_base_phase;
+            this.prev_base_phase = this.base_phase_acc;
+            let master_trig = (d_base < -0.5) ? is_running : 0;
+            
+            let fill_prob = Math.max(0.0, (this.s_shear - 0.2) * 1.25); 
+
+            if (master_trig) {
+                this.rand2 = Math.abs(this.noise());
+                this.rand3 = Math.abs(this.noise());
+                this.rand4 = Math.abs(this.noise());
+                this.slice_dice = Math.abs(this.noise()); 
+            }
+
+            let r2_mapped = (this.rand2 > 0.5) ? 0.5 : 1.5; 
+            let r3_mapped = (this.rand3 > 0.66) ? 2.0 : ((this.rand3 > 0.33) ? 1.5 : 0.5); 
+            let r4_mapped = (this.rand4 > 0.66) ? 4.0 : ((this.rand4 > 0.33) ? 2.0 : 1.5); 
+
+            let mod_rate2 = rate2_mult * ((this.rand2 < fill_prob) ? r2_mapped : 1.0);
+            let mod_rate3 = rate3_mult * ((this.rand3 < fill_prob) ? r3_mapped : 1.0);
+            let mod_rate4 = rate4_mult * ((this.rand4 < fill_prob) ? r4_mapped : 1.0);
+
+            // Independent DIV Accumulators Fix
+            this.c1_acc = (this.c1_acc + (base_hz * rate1_mult)/sr) % 1.0;
+            this.c2_acc = (this.c2_acc + (base_hz * mod_rate2)/sr) % 1.0;
+            this.c3_acc = (this.c3_acc + (base_hz * mod_rate3)/sr) % 1.0;
+            this.c4_acc = (this.c4_acc + (base_hz * mod_rate4)/sr) % 1.0;
+
+            let c1 = this.c1_acc;
+            let c2 = this.wrap(this.c2_acc + global_swing, 0, 1);
+            let c3 = this.wrap(this.c3_acc + (global_swing * 1.5), 0, 1);
+            let c4 = this.wrap(this.c4_acc + (global_swing * 2.0), 0, 1);
+
+            let d_c1 = c1 - this.prev_c1; this.prev_c1 = c1;
+            let d_c2 = c2 - this.prev_c2; this.prev_c2 = c2;
+            let d_c3 = c3 - this.prev_c3; this.prev_c3 = c3;
+            let d_c4 = c4 - this.prev_c4; this.prev_c4 = c4;
+
+            // Trigger on absolute wrap wrap boundary delta < -0.5
+            let raw_trig1 = (d_c1 < -0.5) ? is_running : 0;
+            let raw_trig2 = (d_c2 < -0.5) ? is_running : 0;
+            let raw_trig3 = (d_c3 < -0.5) ? is_running : 0;
+            let raw_trig4 = (d_c4 < -0.5) ? is_running : 0;
+
+            // Pule Stretcher: stretches 1-sample triggers into 200-sample gates
+            if (raw_trig1) this.gate1_hold = 200;
+            if (raw_trig2) this.gate2_hold = 200;
+            if (raw_trig3) this.gate3_hold = 200;
+            if (raw_trig4) this.gate4_hold = 200;
+
+            let cycle_033 = Math.sin(this.wrap(this.base_phase_acc * 0.33, 0, 1) * this.TWOPI);
+            let fluid_ebb = 0.4 + (cycle_033 * 0.2); 
+            
+            let held_trig1 = (this.gate1_hold > 0) ? 1.0 : 0.0; if (this.gate1_hold > 0) this.gate1_hold--;
+            let held_trig2 = (this.gate2_hold > 0) ? 1.0 : 0.0; if (this.gate2_hold > 0) this.gate2_hold--;
+            let held_trig3 = (this.gate3_hold > 0) ? 1.0 : 0.0; if (this.gate3_hold > 0) this.gate3_hold--;
+            let held_trig4 = (this.gate4_hold > 0) ? 1.0 : 0.0; if (this.gate4_hold > 0) this.gate4_hold--;
+
+            let gate1 = held_trig1;
+            let gate2 = held_trig2;
+            let gate3 = held_trig3 * (1 - m_v3_fluid) + fluid_ebb * m_v3_fluid;
+            let gate4 = held_trig4 * (1 - m_v4_fluid) + fluid_ebb * m_v4_fluid;
+
+            let white_core = this.noise();
+            this.pink_filter = this.pink_filter * 0.9 + white_core * 0.1; 
+
+            // EROSION
+            let slice_target = (this.slice_dice > 0.8) ? 32 : ((this.slice_dice > 0.6) ? 16 : ((this.slice_dice > 0.3) ? 8 : 4));
+            let max_mult = 2 + (this.s_erosion * 30); 
+            let actual_slice_mult = Math.min(slice_target, max_mult);
+
+            this.slice_phase_acc = this.wrap(this.slice_phase_acc + (base_hz * actual_slice_mult)/sr, 0, 1);
+            let chopper = (this.slice_phase_acc < 0.5) ? 1.0 : 0.0; 
+            this.slicer_env = this.slide(chopper, this.slicer_env, 20, 200); 
+
+            let d_chop = chopper - this.prev_chopper;
+            if (d_chop > 0.5) { this.glitch_step = (this.glitch_step + 1) % 4; }
+            this.prev_chopper = chopper;
+
+            let is_doppler = (this.glitch_step === 2 && this.s_erosion > 0.5) ? 1.0 : 0.0;
+            let doppler_sag = this.slice_phase_acc * (this.s_erosion - 0.5) * 400 * is_doppler;
+
+            let chop_mix = 1.0 * (1 - this.s_erosion) + this.slicer_env * this.s_erosion;
+
+            // VOLTAGE STARVATION & ENVELOPES
+            let att_1 = 80; 
+            let boom_tail1 = m_v1_fluid * sr * 1.5; 
+            let decay1 = sr * (0.05 + (m_v1_matter * 0.3)) + boom_tail1;
+            this.raw_env1 = is_drone ? 1.0 : this.slide(gate1, this.raw_env1, att_1, decay1);
+            let env1 = this.safepow(this.raw_env1, 1.5);
+
+            let att_2 = 120; 
+            let boom_tail2 = m_v2_fluid * sr * 1.5; 
+            let decay2 = sr * (0.1 + (m_v2_matter * 2.0)) + boom_tail2;
+            this.raw_env2 = is_drone ? 1.0 : this.slide(gate2, this.raw_env2, att_2, decay2);
+            let env2 = this.safepow(this.raw_env2, 1.5);
+
+            let power_draw = (this.s_v1_vol * m_v1_matter * env1) + (this.s_v2_vol * m_v2_matter * env2);
+            let is_starving = power_draw > 1.35 ? 1.0 : 0.0; 
+            this.sag_env = this.slide(is_starving, this.sag_env, 400, 22050); 
+
+            let pitch_sag = 1.0 - (this.sag_env * 0.06); 
+            let amp_sag = 1.0 - (this.sag_env * 0.5);    
+
+            let att_3 = 2 + (m_v3_matter * 100); 
+            let dec_3 = sr * (0.05 + (m_v3_matter * 4.0)); 
+            this.env3 = is_drone ? 1.0 : this.slide(gate3, this.env3, att_3, dec_3);
+
+            let att_4 = 2 + (m_v4_matter * 100);
+            let dec_4 = sr * (0.05 + (m_v4_matter * 4.0));
+            this.env4 = is_drone ? 1.0 : this.slide(gate4, this.env4, att_4, dec_4);
+
+            // VOICE 1 
+            this.pitch_env1 = this.slide(held_trig1, this.pitch_env1, 1, 800); 
+            let freq1 = (40 + (m_v1_mass * 100)) * (1.0 + (this.pitch_env1 * 8.0)) * pitch_sag; 
+            this.phase1 = this.wrap(this.phase1 + (freq1 / sr), 0, 1);
+
+            let bleed_pm1 = this.last_v4 * m_v1_bleed * 3.0; 
+            let sine_phase1 = this.wrap(this.phase1 + bleed_pm1, 0, 1);
+            let sine1 = Math.sin(sine_phase1 * this.TWOPI);
+
+            this.knock_env = this.slide(held_trig1, this.knock_env, 1, 300);
+            let knock1 = this.pink_filter * this.knock_env * 0.4;
+
+            let drive1 = 1.5 + (m_v1_matter * 2.0);
+            let voice1 = Math.tanh((sine1 + knock1) * drive1) * env1 * 1.5; // Gain factor included
+
+            // VOICE 2 
+            this.pitch_env2 = this.slide(held_trig2, this.pitch_env2, 1, 1200); 
+            let freq2 = (30 + (m_v2_mass * 80)) * (1.0 + (this.pitch_env2 * 2.0)) * pitch_sag; 
+            this.phase2 = this.wrap(this.phase2 + (freq2 / sr), 0, 1);
+
+            let d_last_v1 = this.last_v1 - this.prev_last_v1;
+            this.prev_last_v1 = this.last_v1;
+            let bleed_pm2 = d_last_v1 * m_v2_bleed * 8.0; 
+            let sine_phase2 = this.wrap(this.phase2 + bleed_pm2, 0, 1);
+            let sine2 = Math.sin(sine_phase2 * this.TWOPI);
+
+            let drive2 = 1.2 + (m_v2_matter * 1.5);
+            let voice2 = Math.tanh(sine2 * drive2) * env2 * 1.5; // Gain factor included
+
+            // GLASS STATE
+            let is_glass3 = this.s_v3_matter_raw < 0.01;
+            let is_glass4 = this.s_v4_matter_raw < 0.01;
+
+            // VOICE 3 
+            let wood_freq = (40 + (m_v3_mass * 2000)) * pitch_sag;
+            let bleed_fm3 = this.last_v2 * m_v3_bleed * 2500.0; 
+            if(this.p3_acc === undefined) this.p3_acc = 0;
+            this.p3_acc = this.wrap(this.p3_acc + (wood_freq + bleed_fm3)/sr, 0, 1);
+            let strike_core3 = Math.sin(this.p3_acc * this.TWOPI) * this.env3; 
+
+            let fold_drive3 = strike_core3 * (1.0 + (m_v3_matter * 8.0)); 
+            let warped_drive3 = fold_drive3 + (this.safepow(Math.abs(fold_drive3), 1.7) * this.s_v3_warp * 2.5);
+            let folded_out3 = Math.sin(warped_drive3 * this.TWOPI);
+            
+            this.g3_slide = this.slide(gate3, this.g3_slide, 1, 5);
+            let analog_v3 = (folded_out3 + (Math.pow(folded_out3, 3) * 0.333) + (white_core * this.g3_slide * 0.1)) * 0.12; 
+            let voice3 = is_glass3 ? (strike_core3 * 0.4) : analog_v3; 
+
+            // VOICE 4 
+            let metal_freq = (20 + (m_v4_mass * 3000)) * pitch_sag;
+            let bleed_fm4 = this.last_v3 * m_v4_bleed * 4000.0; 
+            if(this.p4_acc === undefined) this.p4_acc = 0;
+            this.p4_acc = this.wrap(this.p4_acc + (metal_freq + bleed_fm4)/sr, 0, 1);
+            let strike_core4 = Math.sin(this.p4_acc * this.TWOPI) * this.env4;
+
+            let fold_drive4 = strike_core4 * (1.0 + (m_v4_matter * 8.0));
+            let warped_drive4 = fold_drive4 + (this.safepow(Math.abs(fold_drive4), 1.7) * this.s_v4_warp * 2.5);
+            let folded_out4 = Math.sin(warped_drive4 * this.TWOPI);
+            
+            this.g4_slide = this.slide(gate4, this.g4_slide, 1, 5);
+            let analog_v4 = (folded_out4 + (Math.pow(folded_out4, 3) * 0.333) + (white_core * this.g4_slide * 0.1)) * 0.12;
+            let voice4 = is_glass4 ? (strike_core4 * 0.4) : analog_v4;
+
+            this.last_v1 = isNaN(voice1) ? 0 : voice1; 
+            this.last_v2 = isNaN(voice2) ? 0 : voice2;
+            this.last_v3 = isNaN(voice3) ? 0 : voice3; 
+            this.last_v4 = isNaN(voice4) ? 0 : voice4;
+
+            this.v1_mute_slide = this.slide(this.p.v1_mute, this.v1_mute_slide, 10, 10);
+            this.v1_mute_slide2 = this.slide(1 - this.v1_mute_slide, this.v1_mute_slide2, 10, 10);
+            let v1_out = voice1 * this.s_v1_vol * this.v1_mute_slide2;
+
+            this.v2_mute_slide = this.slide(this.p.v2_mute, this.v2_mute_slide, 10, 10);
+            this.v2_mute_slide2 = this.slide(1 - this.v2_mute_slide, this.v2_mute_slide2, 10, 10);
+            let v2_out = voice2 * this.s_v2_vol * this.v2_mute_slide2;
+
+            this.v3_mute_slide = this.slide(this.p.v3_mute, this.v3_mute_slide, 10, 10);
+            this.v3_mute_slide2 = this.slide(1 - this.v3_mute_slide, this.v3_mute_slide2, 10, 10);
+            let v3_out = voice3 * this.s_v3_vol * this.v3_mute_slide2;
+
+            this.v4_mute_slide = this.slide(this.p.v4_mute, this.v4_mute_slide, 10, 10);
+            this.v4_mute_slide2 = this.slide(1 - this.v4_mute_slide, this.v4_mute_slide2, 10, 10);
+            let v4_out = voice4 * this.s_v4_vol * this.v4_mute_slide2;
+
+            let tectonic_global_sum = v1_out + v2_out + (v3_out * 0.5) + (v4_out * 0.5);
+
+            let env_in = Math.abs(tectonic_global_sum);
+            let delta_vac = env_in - this.vactrol_state;
+            let slew_rate = delta_vac > 0 ? 0.05 : 0.001; 
+            this.vactrol_state = this.vactrol_state + (delta_vac * slew_rate);
+
+            // OUROBOROS LOOP 
+            let is_ouroboros = (this.s_liquefaction > 0.85 && this.s_collapse > 0.85) ? 1.0 : 0.0;
+            let ouroboros_feed = (this.last_tap_L + this.last_tap_R) * 0.5 * is_ouroboros * 1.5;
+
+            // HALO 
+            let crinkle_amt = Math.min(this.s_collapse * 2.0, 1.0); 
+            let halo_amt = Math.max(0.0, (this.s_collapse - 0.5) * 2.0); 
+
+            this.flutter_acc = this.slide(this.noise(), this.flutter_acc, 800, 800);
+            let flutter = this.flutter_acc * crinkle_amt * 250; 
+            
+            let v34_mix = v3_out + v4_out;
+            this.crinkle_del.write(v34_mix);
+            let live_crinkle = this.crinkle_del.read(300 + flutter, "spline");
+
+            let t1 = this.rev1.read(2053, "linear");
+            let t2 = this.rev2.read(4517, "linear");
+            this.rev1.write(live_crinkle + (t2 * 0.85) + ouroboros_feed); 
+            this.rev2.write(live_crinkle + (t1 * 0.85) + ouroboros_feed);
+            let raw_halo = (t1 + t2) * 0.5;
+
+            let breath_cutoff = Math.max(0.001, Math.min(1.0, 0.01 + (this.vactrol_state * halo_amt * 1.5)));
+            this.halo_lp = (this.halo_lp * (1 - breath_cutoff)) + (raw_halo * breath_cutoff);
+
+            let void_total = (live_crinkle * (1 - halo_amt)) + (this.halo_lp * halo_amt);
+
+            // ECHOPHON 
+            let tumble_amt = Math.max(0.0, (this.s_liquefaction - 0.5) * 2.0);
+            let delay_in = (void_total * this.s_liquefaction);
+
+            let shear_L = 1.0 - (this.s_shear * 0.15); 
+            let shear_R = 1.0 + (this.s_shear * 0.15); 
+            
+            let safe_base_hz = Math.max(0.001, base_hz);
+            let base_time_L = (0.75 / safe_base_hz) * sr * shear_L;
+            let base_time_R = (0.333 / safe_base_hz) * sr * shear_R;
+
+            if(this.sag_off_L === undefined) this.sag_off_L = 0;
+            if(this.sag_off_R === undefined) this.sag_off_R = 0;
+            this.sag_off_L = this.slide(this.vactrol_state * tumble_amt * sr * 0.04, this.sag_off_L, 2000, 20000);
+            this.sag_off_R = this.slide(this.vactrol_state * tumble_amt * sr * 0.06, this.sag_off_R, 2000, 20000);
+
+            let read_time_L = base_time_L + this.sag_off_L + doppler_sag;
+            let read_time_R = base_time_R + this.sag_off_R + (doppler_sag * 1.2); 
+
+            let tap_L_raw = this.del_L.read(read_time_L, "spline");
+            let tap_R_raw = this.del_R.read(read_time_R, "spline");
+
+            this.last_tap_L = tap_L_raw; 
+            this.last_tap_R = tap_R_raw;
+
+            let damp_coeff = 1.0 - (tumble_amt * 0.85); 
+            this.damp_L = (this.damp_L * damp_coeff) + (tap_L_raw * (1 - damp_coeff));
+            this.damp_R = (this.damp_R * damp_coeff) + (tap_R_raw * (1 - damp_coeff));
+
+            let sat_L = Math.tanh(this.damp_L * (1.0 + tumble_amt * 1.5));
+            let sat_R = Math.tanh(this.damp_R * (1.0 + tumble_amt * 1.5));
+
+            this.del_L.write(delay_in + (sat_L * 0.45));
+            this.del_R.write(delay_in + (sat_R * 0.45));
+
+            let tap_L = sat_L * this.s_liquefaction;
+            let tap_R = sat_R * this.s_liquefaction;
+
+            // BAKE
+            let sliced_void = void_total * chop_mix;
+            let sliced_tap_L = tap_L * chop_mix;
+            let sliced_tap_R = tap_R * chop_mix;
+
+            let mix_base_L = (tectonic_global_sum + sliced_void + sliced_tap_L) * amp_sag;
+            let mix_base_R = (tectonic_global_sum + sliced_void + sliced_tap_R) * amp_sag;
+
+            let bus_energy = Math.abs(mix_base_L + mix_base_R) * 0.5;
+            this.opto_state = this.slide(bus_energy, this.opto_state, 400, 8000); 
+
+            let comp_ratio = 1.0 + (this.s_bake * 5.0);
+            let gain_reduction = 1.0 / (1.0 + (this.opto_state * comp_ratio));
+            let makeup_gain = 1.0 + (this.s_bake * 2.5);
+
+            let glued_L = mix_base_L * gain_reduction * makeup_gain;
+            let glued_R = mix_base_R * gain_reduction * makeup_gain;
+
+            let drive_L = glued_L * (1.0 + (this.s_bake * 3.0));
+            let drive_R = glued_R * (1.0 + (this.s_bake * 3.0));
+
+            let transformer_L = Math.tanh(drive_L) + (drive_L * drive_L * 0.15 * this.s_bake);
+            let transformer_R = Math.tanh(drive_R) + (drive_R * drive_R * 0.15 * this.s_bake);
+
+            let out1 = transformer_L - this.dc1_in + 0.995 * this.dc1_out;
+            this.dc1_in = transformer_L; this.dc1_out = out1;
+            
+            let out2 = transformer_R - this.dc2_in + 0.995 * this.dc2_out;
+            this.dc2_in = transformer_R; this.dc2_out = out2;
+
+            outL[i] = isNaN(out1) ? 0 : out1;
+            outR[i] = isNaN(out2) ? 0 : out2;
+        }
+        return true;
+    }
+}
+registerProcessor('karst-node', KarstProcessor);
+`;
+
+let audioCtx, karstNode, analyzer, scopeData;
+let isPlaying = false;
+let presets = JSON.parse(localStorage.getItem('karst_presets_v1')) || {};
+
+const canvas = document.getElementById('scope');
+const ctx = canvas.getContext('2d');
+canvas.width = 125; 
+canvas.height = 50;
+
+function drawScope() {
+    requestAnimationFrame(drawScope);
+    ctx.fillStyle = '#050505';
+    ctx.fillRect(0, 0, canvas.width, canvas.height);
+    
+    if (!analyzer || !isPlaying) return;
+    
+    analyzer.getByteTimeDomainData(scopeData);
+    ctx.lineWidth = 1.5;
+    ctx.strokeStyle = '#00ff44';
+    ctx.beginPath();
+    
+    let sliceWidth = canvas.width * 1.0 / scopeData.length;
+    let x = 0;
+    
+    for(let i = 0; i < scopeData.length; i++) {
+        let v = scopeData[i] / 128.0;
+        let y = v * canvas.height / 2;
+        if (i === 0) ctx.moveTo(x, y); 
+        else ctx.lineTo(x, y);
+        x += sliceWidth;
+    }
+    ctx.lineTo(canvas.width, canvas.height/2);
+    ctx.stroke();
+}
+drawScope();
+
+function setKnobValue(knob, val) {
+    val = Math.max(0, Math.min(1, val));
+    knob.dataset.val = val;
+    let angle = -135 + (val * 270);
+    knob.querySelector('.knob-indicator').setAttribute('transform', `rotate(${angle}, 22, 22)`);
+    sendParam(knob.id, val);
+}
+
+function setMuteValue(btn, val) {
+    val = val ? 1 : 0;
+    btn.dataset.val = val;
+    if (val) btn.classList.add('active');
+    else btn.classList.remove('active');
+    sendParam(btn.id, val);
+}
+
+function sendParam(id, val) {
+    if (karstNode) karstNode.port.postMessage({ id: id, value: val });
+}
+
+function syncAllParams() {
+    document.querySelectorAll('.knob-svg').forEach(knob => {
+        sendParam(knob.id, parseFloat(knob.dataset.val));
+    });
+    document.querySelectorAll('.mute-btn').forEach(btn => {
+        sendParam(btn.id, parseFloat(btn.dataset.val));
+    });
+}
+
+document.querySelectorAll('.knob-svg').forEach(knob => {
+    let isDragging = false, startY, startVal;
+    
+    setKnobValue(knob, parseFloat(knob.dataset.val));
+
+    knob.addEventListener('mousedown', e => {
+        isDragging = true;
+        startY = e.clientY;
+        startVal = parseFloat(knob.dataset.val);
+    });
+
+    window.addEventListener('mousemove', e => {
+        if(!isDragging) return;
+        let delta = (startY - e.clientY) * 0.005;
+        setKnobValue(knob, startVal + delta);
+    });
+
+    window.addEventListener('mouseup', () => { isDragging = false; });
+});
+
+document.querySelectorAll('.mute-btn').forEach(btn => {
+    btn.addEventListener('click', () => {
+        let current = parseFloat(btn.dataset.val);
+        setMuteValue(btn, current === 0 ? 1 : 0);
+    });
+});
+
+async function initAudio() {
+    if (audioCtx) return;
+    
+    audioCtx = new (window.AudioContext || window.webkitAudioContext)({ latencyHint: 'interactive' });
+    const blob = new Blob([workletString], { type: 'application/javascript' });
+    await audioCtx.audioWorklet.addModule(URL.createObjectURL(blob));
+    
+    karstNode = new AudioWorkletNode(audioCtx, 'karst-node', {
+        outputChannelCount: [2]
+    });
+    
+    analyzer = audioCtx.createAnalyser();
+    analyzer.fftSize = 512;
+    scopeData = new Uint8Array(analyzer.frequencyBinCount);
+    
+    karstNode.connect(analyzer);
+    analyzer.connect(audioCtx.destination);
+    
+    isPlaying = true;
+    document.getElementById('btn-activate').classList.add('active');
+    syncAllParams();
+}
+
+document.getElementById('btn-activate').addEventListener('click', (e) => {
+    if (!audioCtx) {
+        initAudio();
+    } else if (audioCtx.state === 'running') {
+        audioCtx.suspend();
+        isPlaying = false;
+        e.target.classList.remove('active');
+    } else {
+        audioCtx.resume();
+        isPlaying = true;
+        e.target.classList.add('active');
+    }
+});
+
+document.getElementById('btn-scatter').addEventListener('click', () => {
+    document.querySelectorAll('.knob-svg').forEach(knob => {
+        setKnobValue(knob, Math.random());
+    });
+});
+
+const words1 = ["OBSIDIAN", "TECTONIC", "SHADOW", "ABYSSAL", "CALDERA", "PYROCLASTIC", "MANTLE", "SUBDUCTION"];
+const words2 = ["FRACTURE", "TREMOR", "VOID", "SLIP", "CORE", "VEIN", "CRUST", "ECHO"];
+
+function refreshPresetList() {
+    const list = document.getElementById('preset-list');
+    list.innerHTML = '<option value="init">INITIALIZED</option>';
+    for(let pName in presets) {
+        let opt = document.createElement('option');
+        opt.value = pName; opt.textContent = pName;
+        list.appendChild(opt);
+    }
+}
+refreshPresetList();
+
+document.getElementById('btn-dump').addEventListener('click', () => {
+    let w1 = words1[Math.floor(Math.random() * words1.length)];
+    let w2 = words2[Math.floor(Math.random() * words2.length)];
+    let name = w1 + " " + w2;
+    
+    let state = {};
+    document.querySelectorAll('.knob-svg').forEach(k => { state[k.id] = parseFloat(k.dataset.val); });
+    document.querySelectorAll('.mute-btn').forEach(b => { state[b.id] = parseFloat(b.dataset.val); });
+    
+    presets[name] = state;
+    localStorage.setItem('karst_presets_v1', JSON.stringify(presets));
+    refreshPresetList();
+    document.getElementById('preset-list').value = name;
+});
+
+document.getElementById('preset-list').addEventListener('change', (e) => {
+    if(e.target.value === 'init') return;
+    let state = presets[e.target.value];
+    if(state) {
+        for(let key in state) {
+            let el = document.getElementById(key);
+            if(el) {
+                if(el.classList.contains('knob-svg')) setKnobValue(el, state[key]);
+                else if(el.classList.contains('mute-btn')) setMuteValue(el, state[key]);
+            }
+        }
+    }
+});
+
+</script>
+</body>
+</html>
